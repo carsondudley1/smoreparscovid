@@ -26,7 +26,7 @@ The SMoRe ParS workflow consists of five main steps:
 
 1. **ABM Parameter Sweep**: Simulate the agent-based model across parameter combinations sampled via Latin Hypercube Sampling (LHS)
 2. **Surrogate Fitting to ABM**: Fit an SIRH surrogate model to each ABM output, computing profile likelihood confidence intervals
-3. **Parameter Surface Reconstruction**: Build interpolated surfaces mapping ABM parameters → surrogate parameters using `LinearNDInterpolator`
+3. **Parameter Surface Reconstruction**: Build interpolated surfaces mapping ABM parameters → surrogate parameters
 4. **Surrogate Fitting to Data**: Fit the same SIRH model directly to observed surveillance data with profile likelihood CIs
 5. **ABM Space Filtering**: Retain only ABM parameter combinations whose projected surrogate values fall within the data-derived confidence regions
 
