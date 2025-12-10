@@ -102,13 +102,15 @@ These outputs support downstream analyses including intervention simulation, pol
 
 ## Citation
 
-If you use this code, please cite:
+If you use this code in research work, please cite:
 ```bibtex
-@article{dudley2025smoreparscovid,
+@article{dudley2025sparse,
   title={From Sparse Data to Smart Decisions: Region-Specific Policy Evaluation via Simulation},
   author={Dudley, Carson and Bergman, Daniel and Jain, Harsh and Norton, Kerri-Ann and Rutter, Erica and Eisenberg, Marisa and Jackson, Trachette},
-  journal={},
-  year={2025}
+  journal={medRxiv},
+  year={2025},
+  doi={10.64898/2025.12.05.25341712},
+  note={Preprint}
 }
 ```
 
