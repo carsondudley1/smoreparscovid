@@ -117,7 +117,7 @@ If you use this code, please cite:
 This implementation builds on the SMoRe ParS framework:
 
 - Jain, H. et al. (2022). SMoRe ParS: Surrogate Modeling for Reconstructing Parameter Surfaces
-- Bergman, D. et al. (2024). Connecting agent-based models with mechanistic models via surrogate modeling
+- Bergman, D. et al. (2023). Connecting Agent-Based Models with High-Dimensional Parameter Spaces to Multidimensional Data Using SMoRe ParS: A Surrogate Modeling Approach
 
 ## License
 
