@@ -76,42 +76,6 @@ You will likely need to modify the script based on:
 - Time period alignment between ABM simulations and observed data
 - Whatever surrogate model you choose to use (the script shows the simple SIRH model)
 
-### Example Usage
-```python
-from parameter_surface_reconstruction_example import SMoReParS, run_complete_smore_pars_workflow
-
-# Run complete workflow
-smore = run_complete_smore_pars_workflow(
-    fred_data_path='path/to/abm_sweep_output.csv',
-    experimental_cases=your_case_data,      # numpy array
-    experimental_hosp=your_hosp_data,       # numpy array
-    experimental_t=your_time_points,        # numpy array
-    population_size=367600                  # your region's population
-)
-
-# Get data-consistent ABM parameters
-consistent_params = smore.filter_abm_space()
-
-# Export results
-fits_df = smore.get_fits_dataframe()
-fits_df.to_csv('smore_pars_results.csv', index=False)
-```
-
-## Requirements
-
-- Python 3.8+
-- NumPy
-- Pandas
-- SciPy
-- Matplotlib
-- tqdm
-
-Install dependencies:
-```bash
-pip install numpy pandas scipy matplotlib tqdm
-```
-
-For ABM simulations, FRED (Framework for Reconstructing Epidemiological Dynamics) must be installed separately. See [FRED documentation](https://fred.publichealth.pitt.edu/) for installation instructions.
 
 ## Data Requirements
 
