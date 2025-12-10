@@ -1,0 +1,49 @@
+
+#### ANTIVIRAL MODEL
+#### Assumes availability of antivirals for entire population
+
+##### CONDITIONS
+use FRED::Influenza
+
+# antivirals are indicated if an eligible person contracts influenza
+state INF.Is { set_state(AV,Eligible,Indicated) }
+
+
+condition AV {
+ states = Eligible Indicated Received Finished
+}
+
+state AV.Start {
+  if (age<2) then next(Eligible)
+  if (age >= 65) then next(Eligible)
+  if (race==american_indian) then next(Eligible)
+  if (race==alaska_native) then next(Eligible)
+  default(Excluded)
+}
+
+state AV.Eligible {
+  effect()
+  wait()
+  next()
+}
+
+state AV.Indicated {
+  effect()
+  wait(0)
+  next(Received)
+}
+
+state AV.Received {
+  effect()
+  wait(24)
+  next(Finished)
+}
+
+state AV.Finished {
+  set_sus(INF,susceptibility_to_INF*0.7)
+  set_trans(INF,transmissibility_for_INF*0.3)
+  wait()
+  next()
+}
+
+

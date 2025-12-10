@@ -1,0 +1,1 @@
+run_fred -p test.fred -d OUT.TEST -n 2

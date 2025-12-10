@@ -1,0 +1,14 @@
+#!/bin/bash
+echo diff -b OUT.TEST/RUN1/out.csv OUT.RT/RUN1/out.csv
+diff -b OUT.TEST/RUN1/out.csv OUT.RT/RUN1/out.csv
+
+echo diff -b OUT.TEST/RUN2/out.csv OUT.RT/RUN2/out.csv
+diff -b OUT.TEST/RUN2/out.csv OUT.RT/RUN2/out.csv
+
+echo cmp -b OUT.TEST/RUN1/health_records.txt OUT.RT/RUN1/health_records.txt
+cmp -b OUT.TEST/RUN1/health_records.txt OUT.RT/RUN1/health_records.txt
+
+echo cmp -b OUT.TEST/RUN2/health_records.txt OUT.RT/RUN2/health_records.txt
+cmp -b OUT.TEST/RUN2/health_records.txt OUT.RT/RUN2/health_records.txt
+
+

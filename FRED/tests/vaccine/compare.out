@@ -1,0 +1,4 @@
+diff -b OUT.TEST/RUN1/out.csv OUT.RT/RUN1/out.csv
+diff -b OUT.TEST/RUN2/out.csv OUT.RT/RUN2/out.csv
+cmp -b OUT.TEST/RUN1/health_records.txt OUT.RT/RUN1/health_records.txt
+cmp -b OUT.TEST/RUN2/health_records.txt OUT.RT/RUN2/health_records.txt

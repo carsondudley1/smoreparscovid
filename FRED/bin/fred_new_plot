@@ -1,0 +1,597 @@
+#!/usr/bin/perl
+
+##########################################################################################
+## 
+##  This file is part of the FRED system.
+##
+## Copyright (c) 2010-2012, University of Pittsburgh, John Grefenstette, Shawn Brown, 
+## Roni Rosenfield, Alona Fyshe, David Galloway, Nathan Stone, Jay DePasse, 
+## Anuroop Sriram, and Donald Burke
+## All rights reserved.
+##
+## Copyright (c) 2013-2021, University of Pittsburgh, John Grefenstette, Robert Frankeny,
+## David Galloway, Mary Krauland, Michael Lann, David Sinclair, and Donald Burke
+## All rights reserved.
+##
+## FRED is distributed on the condition that users fully understand and agree to all terms of the 
+## End User License Agreement.
+##
+## FRED is intended FOR NON-COMMERCIAL, EDUCATIONAL OR RESEARCH PURPOSES ONLY.
+##
+## See the file "LICENSE" for more information.
+##
+##########################################################################################
+
+use strict;
+use warnings;
+use Env;
+use Getopt::Long qw(:config no_ignore_case bundling);
+
+my $FRED = $ENV{FRED_HOME};
+die "$0: Please set environmental variable FRED_HOME to location of FRED home directory\n" if not $FRED;
+
+my $FREDRESULTS = $ENV{FRED_RESULTS};
+$FREDRESULTS = "$ENV{FRED_HOME}/RESULTS" if not $FREDRESULTS;
+
+my $gnuplot = $ENV{FRED_GNUPLOT};
+die "$0: no gnuplot\n" if (not $gnuplot or (not -x $gnuplot));
+
+my $commandline = "fred_plot @ARGV";
+my @data = ();
+
+my @vars = ();
+my @labels = ();
+my @keys = ();
+my @colors = ();
+my $xmin = "0";
+my $xmax = "*";
+my $ymin = "0";
+my $ymax = "*";
+my $display = 1;
+my $errorbars;
+my $title = "FRED Simulation";
+my $weekly = 0;
+my $monthly = 0;
+my $annually = 0;
+my $all;
+my $font = "Helvetica";
+my $fontsize = "18";
+my $boxes;
+my $normalize;
+my $scale = 100000;
+my $legend = "";
+my $linewidth = 0;
+my $xlabel = "Days";
+my $ylabel = "Individuals";
+my $xtics = "";
+my $outfile = "";
+my $help = "";
+my $show_year = 0;
+my $show_vars = 0;
+my $run = 0;
+my $total = 0;
+my $make_png = 0;
+my $use_mean_std = 0;
+my $key_out = 0;
+my $opt_result = GetOptions(
+			    "a" => \$all,
+			    "all" => \$all,
+			    "b" => \$boxes,
+			    "bars" => \$boxes,
+			    "boxes" => \$boxes,
+			    "c=s" => \@colors,
+			    "colors=s" => \@colors,
+			    "histogram" => \$boxes,
+			    "h" => \$help,
+			    "help" => \$help,
+			    "d=i" => \$display,
+			    "display=i" => \$display,
+			    "e" => \$errorbars,
+			    "f=s" => \$font,
+			    "k=s" => \@keys,
+			    "lw=f" => \$linewidth,
+			    "l=s" => \@labels,
+			    "labels=s" => \@labels,
+			    "T=s" => \$title,
+			    "t=s" => \$title,
+			    "v=s" => \@vars,
+			    "var=s" => \@vars,
+			    "V" => \$show_vars,
+			    "x=f" => \$xmin,
+			    "X=f" => \$xmax,
+			    "y=f" => \$ymin,
+			    "Y=f" => \$ymax,
+			    "errorbars" => \$errorbars,
+			    "font=s" => \$font,
+			    "F=f" => \$fontsize,
+			    "fsize=f" => \$fontsize,
+			    "keys=s" => \@keys,
+			    "key_out" => \$key_out,
+			    "legend=s" => \$legend,
+			    "mean" => \$use_mean_std,
+			    "n" => \$normalize,
+			    "normalize" => \$normalize,
+			    "r=i" => \$run,
+			    "s=f" => \$scale,
+			    "scale=f" => \$scale,
+			    "title=s" => \$title,
+			    "total" => \$total,
+			    "w" => \$weekly,
+			    "weekly" => \$weekly,
+			    "monthly" => \$monthly,
+			    "annually" => \$annually,
+			    "xmin=i" => \$xmin,
+			    "xmax=i" => \$xmax,
+			    "Xmax=i" => \$xmax,
+			    "ymin=i" => \$ymin,
+			    "ymax=i" => \$ymax,
+			    "Ymax=i" => \$ymax,
+			    "ylabel=s" => \$ylabel,
+			    "xlabel=s" => \$xlabel,
+			    "xtics=i" => \$xtics,
+			    "year=i" => \$show_year,
+			    "o=s" => \$outfile,
+			    "output=s" => \$outfile,
+			    "png" => \$make_png,
+			   );
+
+my $usage = <<EOH;
+usage: fred_plot -k key -v var [ options ], where options include:
+       -a: show all individual runs.
+       -b: plot bar charts instead of curves.
+       -d 0/1 : display the image file (default = 1).
+       -e: include errorbars on plot.
+       -f font : use the named font.
+       -F fontsize: specify font size.
+       -h: print this help message.
+       -k key [ -k key ... ]: keys of jobs to plot.
+       -n: scale y-axis to show counts per <s> people.
+       -o outfile: send output image to indicated file.
+       -r <n>: show individual run <n>.
+       -s <s> : scale factor for normalization.
+       -t title: Title to appear on plot.
+       -v var [ -v var ... ]: variable to be plotted.
+       -V: print list of available variables and exit.
+       -w: plot variables averaged over epi weeks.
+       -x xmin: min value for x-axis.
+       -X xmax: max value for x-axis.
+       -y ymin: min value for y-axis.
+       -Y ymax: max value for y-axis.
+       --annually: plot annual values
+       --monthly: plot monthly values
+       --xtics <n>: put xtics every <n> units.
+       --xlabel <s>: label the x axis with "s".
+       --ylabel <s>: label the y axis with "s".
+       --year 1: show year in xtics.
+       --png 0/1: output to png rather than pdf (default = 0).
+EOH
+
+die $usage if $help;
+die $usage if not @keys;
+
+# resolve conflicting options
+
+# the following permit these options to have multiple values separated
+# by commas e.g. -k X,Y,Z is the same as -k X -k Y -k Z
+@keys = split(/,/, join(',',@keys));
+# print  "$0: keys = ";
+# print "|$_|\n" for @keys;
+# exit;
+
+# check keys
+my $bindir = "$FRED/bin";
+my %id_of_key = ();
+my $idstr = "";
+for my $key (@keys) {
+  my $id = `$bindir/fred_id $key`;
+  chomp $id;
+  die "$0: UNKNOWN key: $key\n" if $id eq "UNKNOWN";
+  $idstr.= "-$id";
+
+  my $status = `$bindir/fred_status -k $key`;
+  chomp $status;
+  $status =~ s/\s.*//;
+  die "$0 bad status: $status\n" if $status ne "FINISHED";
+  $id_of_key{$key} = $id;
+
+  if ($show_vars) {
+    my $available = `cat $FREDRESULTS/JOB/$id/OUT/PLOT/VARS`;
+    print "$0: Plot variables:\n$available\n";
+    exit;
+  }
+}
+
+die $usage if not @vars;
+
+# the following permit these options to have multiple values separated
+# by commas e.g. -v X,Y,Z is the same as -v X -v Y -v Z
+@vars = split(/,/, join(',',@vars));
+@labels = split(/,/, join(',',@labels));
+@colors = split(/,/, join(',',@colors));
+
+if (not @colors) {
+  @colors = qw/blue red green orange purple black skyblue greenyellow medium-blue dark-green dark-blue/;
+}
+
+# create an array of labels for variables to appear in the plot key
+my @label = ();
+for my $i (0..$#vars) {
+  if ($i < scalar @labels) {
+    $label[$i] = $labels[$i];
+  }
+  else {
+    $label[$i] = $vars[$i];
+  }
+}
+
+
+# create a good name for the plt and pdf files
+my $keystr = join "-", @keys;
+my $varstr = join "-", @vars;
+$varstr =~ s/\//-divided_by-/g;
+my $plotfile = "plot-$keystr-$varstr.plt";
+my $pdffile = "";
+if (not $outfile) {
+  $outfile = "plot-$keystr-$varstr.pdf";
+  $pdffile = "plot-$keystr-$varstr.pdf";
+  if ($make_png) {
+    $outfile = "plot-$keystr-$varstr.png";
+  }
+}
+else {
+  $plotfile = "plot-$outfile.plt";
+  $pdffile = "$outfile.pdf";
+  if ($make_png) {
+    $outfile = "$outfile.png";
+  }
+  else {
+    $outfile = "$outfile.pdf";
+  }
+}
+
+if ($make_png) {
+  ## $font = "Arial";
+  ## $fontsize = $fontsize - 2;
+}
+else {
+  ## $title =~ s/_/\\\\_/g;
+}
+$title =~ s/_/\\\\_/g;
+
+# get the data files associated with each variable
+
+my $nkeys = scalar @keys;
+for my $i (0..$#vars) {
+  my $v = $vars[$i];
+  my $key = $keys[$i % $nkeys];
+  # print "key = |$key| v = |$v|\n";
+  my $runs = get_runs($key);
+  $run = 0 if ($runs < $run);
+  get_data($key, $v, 0) if ($all or not $run);
+  if ($all) {
+    for my $run_number (1..$runs) {
+      get_data($key, $v, $run_number);
+    }
+  } elsif ($run) {
+    get_data($key, $v, $run);
+  }
+}
+
+# create the input file for gnuplot
+my $date = scalar localtime;
+my $titlefontsize = $fontsize + 4;
+my $terminal = "pdfcairo font '$font,$fontsize' linewidth 3 size 7,5";
+if ($make_png == 1) {
+  # $terminal = "pngcairo font '$font,$fontsize' linewidth 1";
+}
+
+my $setkey = "set key at graph 0.96, graph 0.96 right";
+$setkey = "set key $legend" if $legend;
+if ($key_out) {
+  $setkey = "set key outside right";
+}
+
+open FH, ">$plotfile";
+print FH <<"EOF";
+#!$gnuplot
+#
+# file: $plotfile
+# created: $date
+#
+# command line used to generate this file:
+# $commandline
+#
+set terminal $terminal
+set title \"$title\" font \"$font,$titlefontsize\"
+set output \"$outfile\"
+set output \"$pdffile\"
+$setkey
+set grid
+set xtics nomirror out $xtics
+set ytics mirror in
+set mytics
+EOF
+
+if ($normalize) {
+  if ($scale == 1) {
+    $ylabel = "Fraction of Population";
+  }
+  elsif ($scale == 100) {
+    $ylabel = "Percent";
+  }
+  else {
+    $ylabel = "Per $scale";
+  }
+}
+
+$xlabel = "Year" if $annually;
+$xlabel = "Month" if $monthly;
+$xlabel = "Week" if $weekly;
+
+print FH "set xrange [$xmin:$xmax]\n";
+print FH "set yrange [$ymin:$ymax]\n";
+print FH "set datafile separator ','\n";
+print FH "set xlabel \"$xlabel\" offset 0,0.5\n";
+print FH "set ylabel \"$ylabel\" offset 1.2,0\n";
+print FH "set xtics rotate by 315\n" if ($monthly);
+print FH "set xtics rotate by 270\n" if ($weekly);
+print FH "set bars 2.0 front\n";
+
+if ($boxes) {
+  my $vn = scalar @vars;
+  print FH "\n# set up boxes\n";
+  print FH "vars = $vn\n";
+  print FH "fredkeys = ", scalar @keys, "\n";
+  print FH "nplots = vars\n";
+  print FH "total_relative_boxwidths = 0.8\n";
+  print FH "dx = total_relative_boxwidths/(1.0*nplots)\n";
+  print FH "set boxwid (total_relative_boxwidths/(1.0*nplots)) relative\n";
+  print FH "set style fill solid 1.0 border 0\n";
+  print FH "get_shift(n) = dx*(n-0.5*nplots-0.5)\n";
+  # print FH "set xtics offset graph (-1.0*get_shift(1)), 0\n";
+  print FH "\n";
+}
+
+if ($monthly) {
+  $xtics = 1 if not $xtics;
+  print FH "unset grid\n" if $xtics > 1;
+  print FH "\n";
+}
+
+if ($weekly) {
+  $xtics = 1 if not $xtics;
+  my $xlab_start = 6;
+  $xlab_start = 0 if $show_year;
+  print FH "get_xlabel(s) = (((s[6:*]+0)\%$xtics)==1 \&\& (s[6:*]+0 != 53))?sprintf('\%s',s[$xlab_start:*]):''\n";
+  print FH "unset grid\n" if $xtics > 1;
+  print FH "\n";
+}
+
+my $n = 0;
+my $ncolor = 0;
+for my $i (0..$#vars) {
+  my $v = $vars[$i];
+  my $titlevar = $v;
+  my $vlabel = $label[$i];
+  my $key = $keys[$i % $nkeys];
+  my $runs = get_runs($key);
+  $run = 0 if ($runs < $run);
+  my $ptitle = "$vlabel";
+  my $plotcmd = ($n == 0);
+  $n++;
+  print FH "plot \\\n" if $plotcmd;
+  $ptitle =~ s/_/\\_/g;  
+  print FH plot_command($ptitle,$n,0) if ($all or not $run);
+  $plotcmd = 0;
+  if ($all) {
+    for my $run_number (1..$runs) {
+      print FH plot_command("Run $run_number",$n,$run_number);
+    }
+  } elsif ($run) {
+    print FH plot_command("",$n,$run);
+  }
+}
+print FH "\n";
+print FH "$_\n" for @data;
+print FH "\n";
+close FH;
+system "chmod +x $plotfile";
+system ($plotfile);
+print "fred_plot: source_file = $plotfile  image_file = $outfile\n";
+if ($make_png) {
+  system "convert -density 300 $pdffile -background white -quality 100 $outfile";
+}
+system ("open $outfile") if $display;
+exit;
+
+##########################################################
+
+sub get_data {
+  my ($key, $var, $run) = @_;
+  # print "get_data key = $key var = |$var| run = |$run|\n";
+  my $tmpfile = ".tmpfile";
+
+  my $numerator = "";
+  my $denominator = "";
+  if ($var =~ '/') {
+    ($numerator, $denominator) = $var =~ /(.*)\/(.*)/;
+    die "$0: bad variable name |$var|\n" if (not $numerator or not $denominator);
+    $var = $numerator;
+  }
+
+  my $time = "DAILY";
+  $time = "WEEKLY" if $weekly;
+
+  my $file = $var;
+  # print "file base = |$file|\n";
+
+  # find the CSV files directory
+  my $id = `fred_id $key`;
+  chomp $id;
+  my $csvfile = "$FREDRESULTS/JOB/$id/OUT/PLOT/$time/$file.csv";
+  if (not -e $csvfile) {
+    my $available = `cat $FREDRESULTS/JOB/$id/OUT/PLOT/VARS`;
+    die "$0: Can't find csv file $csvfile\nSelect variable from list:\n$available\n";
+  }
+  # print "csvfile = |$csvfile|\n";
+
+  my $csvfile2 = "";
+  if ($denominator) {
+    my $file2 = $denominator;
+    # print "file base = |$file2|\n";
+    
+    # find the CSV files directory
+    $csvfile2 = "$FREDRESULTS/JOB/$id/OUT/PLOT/$time/$file2.csv";
+    if (not -e $csvfile2) {
+      my $available = `cat $FREDRESULTS/JOB/$id/OUT/PLOT/VARS`;
+      die "$0: Can't find csv file $csvfile2\nSelect variable from list:\n$available\n";
+    }
+  }
+
+  my @a = ();
+  open IN, $csvfile;
+  while (my $line = <IN>) {
+    chomp $line;
+    push @a, $line;
+  }
+  close IN;
+
+  my @b = ();
+  if ($csvfile2) {
+    open IN, $csvfile2;
+    while (my $line = <IN>) {
+      chomp $line;
+      push @b, $line;
+    }
+    close IN;
+  }
+
+  my @tmpdata = ();
+  if (@b) {
+
+    # divide elements in each line in @a by corresponding line in @b
+    for my $aline (@a) {
+      my $bline = shift @b;
+      my @x = split(',',$aline);
+      my @y = split(',',$bline);
+      my @z = ();
+      if ($x[0] eq "INDEX") {
+	@z = @x; 
+      }
+      else {
+	# index
+	push @z, $x[0];
+	# number of runs
+	push @z, $x[1];
+	# popsize
+	push @z, $x[2];
+	for my $i (3..(9+$x[1])) {
+	  # NOTE: division by zero is defined as 0 here!
+	  my $quot = 0;
+	  $quot = $x[$i] if $x[$i] == 0;
+	  $quot = $x[$i]/$y[$i] if $y[$i] != 0;
+	  push @z, $quot;
+	}
+      }
+      my $zline = join(",",@z);
+      push @tmpdata, $zline;
+    }
+  }
+  else {
+    @tmpdata = @a;
+  }
+
+  push @tmpdata, "EOF";
+  push @data, @tmpdata;
+  push @data, @tmpdata if $errorbars and $run == 0;
+}
+
+##########################################################
+
+sub plot_command {
+  my ($ptitle,$n,$run) = @_;
+
+  # x-axis value
+  my $x = "(\$1):";
+  $x = "(\$0):" if $weekly;
+  $x = "(\$0+get_shift($n)):" if $boxes;
+
+  # y-axis value
+  my $y = "\$6"; #this is the median value (default)
+  $y = "\$9" if $use_mean_std; # this is the mean
+  $y = "\$" . ($run+10) if $run; # this is the individual run value
+
+  # divide by pop size to normalize
+  my $mult = 1.0;
+  if ($normalize) {
+    $mult = "(1.0*$scale/\$3)";
+    $y = "$y*$mult";
+  }
+
+  # errorbars
+  my $e = "(0)";
+  if ($errorbars and $run == 0) {
+    if ($use_mean_std) {
+      $e = "(\$10*$mult)";
+    }
+    else {
+      $e = "(\$5*$mult):(\$7*$mult)";
+    }
+  }
+
+  # xtics
+  my $xtic = "";
+  $xtic = ":xtic(\$0>0?strcol(1):'')" if ($monthly or $weekly) and $n == 1;
+  $xtic = ":xtic((\$0>0&&(int(\$0)\%$xtics==1))?strcol(1):'')" if ($monthly and $xtics > 1) and $n == 1;
+  $xtic = ":xtic(\$0>0?get_xlabel(strcol(1)):'')" if ($weekly and $xtics>1) and $n == 1;
+  
+  # title
+  my $title = "title '$ptitle'";
+  
+  # line color
+  my $color_num = $ncolor % (scalar @colors);
+  my $lt = "lt rgb '$colors[$color_num]'";
+  if ($all) {
+    if ($run == 0) {
+      $lt = "lt -1";
+    }
+    else {
+      $lt = "lt $run";
+    }
+  }
+  $ncolor++;
+  
+  # line width
+  my $lw = "lw 2";
+  if ($linewidth) {
+    $lw = "lw $linewidth";
+  }
+  if ($all) {
+    if ($run == 0) {
+      $lw = "lw 2";
+      $lw = "lw $linewidth" if $linewidth;
+    }
+    else {
+      $lw = "lw 1" if $run > 0;
+    }
+  }
+  $lw = "" if $boxes;
+
+  # plot with lines?
+  my $w = "with lines";
+  $w = "with boxes" if $boxes;
+
+  my $spec = "";
+  $spec = "'-' using $x($y)$xtic $title $w $lt $lw, \\\n";
+  $spec .= "'-' using $x($y):$e notitle wi errorbars lt -1 lw 2, \\\n" if $errorbars and $run == 0;
+  return $spec;
+}
+
+sub get_runs {
+  my $key = shift;
+  my $id = $id_of_key{$key};
+  my $runs = `cat $FREDRESULTS/JOB/$id/META/RUNS`;
+  chomp $runs;
+  return $runs;
+}
+

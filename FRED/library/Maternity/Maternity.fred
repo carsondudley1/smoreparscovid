@@ -1,0 +1,86 @@
+
+#####################################################
+# MODULE FRED::Maternity
+# Author: John Grefenstette
+# Date: 15 Apr 2019
+#
+
+##### OPTIONS:
+# enable_health_records = 1
+# MATERNITY.enable_health_records = 1
+
+# REQUIRED PARAMETERS:
+# This condition only makes sense if people age
+enable_population_dynamics = 1
+
+Condition MATERNITY {
+  states = Female InitNotPregnant InitPregnant Screening \
+  	 NotPregnant Pregnant ChildBirth PostPartum PostReproductive
+  PostReproductive.is_dormant = 1
+}
+
+state MATERNITY.Start {
+  if (sex == male) then next(Excluded)
+  default(Female)
+}
+
+state MATERNITY.Female {
+  wait(0)
+  if (age<15) then next(InitNotPregnant)
+  if (50<=age) then next(PostReproductive)
+  if (range(age,15,19), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(InitPregnant) with prob(0.016)
+  if (range(age,20,24), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(InitPregnant) with prob(0.073)
+  if (range(age,25,29), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(InitPregnant) with prob(0.075)
+  if (range(age,30,34), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(InitPregnant) with prob(0.075)
+  if (range(age,35,39), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(InitPregnant) with prob(0.045)
+  if (range(age,40,44), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(InitPregnant) with prob(0.014)
+  if (range(age,45,49), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(InitPregnant) with prob(0.000525)
+  default(InitNotPregnant)
+}
+
+state MATERNITY.InitNotPregnant {
+  wait(24*uniform(1,365))
+  next(Screening)
+}
+
+state MATERNITY.InitPregnant {
+  wait(24*uniform(1,280))
+  next(ChildBirth)
+}
+
+state MATERNITY.Screening {
+  wait(0)
+  if (range(age,15,19), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(Pregnant) with prob(0.0214)
+  if (range(age,20,24), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(Pregnant) with prob(0.0791)
+  if (range(age,25,29), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(Pregnant) with prob(0.1033)
+  if (range(age,30,34), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(Pregnant) with prob(0.1032)
+  if (range(age,35,39), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(Pregnant) with prob(0.0595)
+  if (range(age,40,44), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(Pregnant) with prob(0.0188)
+  if (range(age,45,49), profile != college_student, profile != military, profile != prisoner, profile != nursing_home_resident) then next(Pregnant) with prob(0.00069)
+  if (50<=age)          then next(PostReproductive) with prob(1)
+  default(NotPregnant)
+}
+
+state MATERNITY.NotPregnant {
+  wait(24*365)
+  next(Screening)
+}
+
+state MATERNITY.Pregnant {
+  wait(24*max(259,min(294,normal(280,7))))
+  next(ChildBirth)
+}
+
+state MATERNITY.ChildBirth {
+  give_birth()
+  wait(24)
+  next(PostPartum)
+}
+
+state MATERNITY.PostPartum {
+  wait(24*max(10,normal(30,15)))
+  next(Screening)
+}
+
+state MATERNITY.PostReproductive {}
+

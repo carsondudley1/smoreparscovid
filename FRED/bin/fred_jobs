@@ -1,0 +1,51 @@
+#!/usr/bin/perl
+
+##########################################################################################
+## 
+##  This file is part of the FRED system.
+##
+## Copyright (c) 2010-2012, University of Pittsburgh, John Grefenstette, Shawn Brown, 
+## Roni Rosenfield, Alona Fyshe, David Galloway, Nathan Stone, Jay DePasse, 
+## Anuroop Sriram, and Donald Burke
+## All rights reserved.
+##
+## Copyright (c) 2013-2021, University of Pittsburgh, John Grefenstette, Robert Frankeny,
+## David Galloway, Mary Krauland, Michael Lann, David Sinclair, and Donald Burke
+## All rights reserved.
+##
+## FRED is distributed on the condition that users fully understand and agree to all terms of the 
+## End User License Agreement.
+##
+## FRED is intended FOR NON-COMMERCIAL, EDUCATIONAL OR RESEARCH PURPOSES ONLY.
+##
+## See the file "LICENSE" for more information.
+##
+##########################################################################################
+
+use strict;
+use warnings;
+use Env;
+use Getopt::Std;
+
+my $FRED = $ENV{FRED_HOME};
+die "$0: Please set environmental variable FRED_HOME to location of FRED home directory\n" if not $FRED;
+
+my $FREDRESULTS = $ENV{FRED_RESULTS};
+$FREDRESULTS = "$ENV{FRED_HOME}/RESULTS" if not $FREDRESULTS;
+
+my $usage = "$0 [ --help ]\nThis command lists all jobs in $FREDRESULTS\n";
+my ($help) = @ARGV;
+die $usage if $help;
+
+my $dir = "$FREDRESULTS";
+system "mkdir -p $dir; touch $dir/KEY" if not -d $dir;
+die "$0: ERROR FINDING $dir\n" if not -d $dir;
+
+open FH, "$dir/KEY" or die "$0: Can't find $dir/KEY\n";
+while (<FH>) {
+  chomp;
+  my ($key, $id) = split;
+  printf "KEY = %-20s\tJOB = %3d\t", $key, $id;
+  print "STATUS = ", `$FRED/bin/fred_status -k $key`;
+}
+close FH;

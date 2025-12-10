@@ -1,0 +1,141 @@
+##################################################
+#
+# FRED Model: Covid-19
+#
+# Date: 14 Feb 2025
+# Author: Carson Dudley
+#
+##################################################
+
+### Template File for Hospital Parameter Sweep
+
+##### SIMULATED LOCATION
+locations = Washtenaw_County_MI
+
+##### SIMULATED TIMEFRAME:
+start_date = 2020-Aug-28
+end_date = 2020-Dec-26
+
+diseases=1
+seed = 12661
+
+##### OUTPUT OPTIONS
+enable_visualization_layer = 1
+INF.E.visualize = 1
+INF.Is.visualize = 1
+INF.Ia.visualize = 1
+INF.H.visualize = 1
+INF.R.visualize = 1
+
+# Track hospitalization variables
+enable_health_records = 1
+track_infection_events = 1
+track_hospitalization_events = 1
+track_hospitalization = 1
+
+##### CONDITIONS
+condition INF {
+  states = S E Is Ia H R Import
+  import_start_state = Import
+  transmission_mode = proximity
+  transmissibility = 1.229720
+  R0_a = 0.25
+  R0_b = 0.611043
+  S.is_dormant = 1
+  R.is_dormant = 1
+  exposed_state = E
+}
+
+state INF.S {
+  set_sus(INF,1)
+  wait()
+  next()
+}
+
+state INF.E {
+  set_sus(INF,0)
+  wait(24*lognormal(4.953257,0.5))
+  next(Is) with prob(0.65)
+  next(Ia) with prob(0.35)
+}
+
+state INF.Is {
+  set_trans(INF,1)  
+  set_state(StayHome,No,Symptoms)
+  wait(24* lognormal(2.3,0.5))
+  next(H) with prob(0.173017)
+  next(R) with prob(1.0 - 0.173017)
+}
+  
+state INF.Ia {
+  set_trans(INF,0.067219)
+  wait(24 * lognormal(2.3, 0.5))
+  next(H) with prob(0.02)  # Fixed low probability for asymptomatic cases
+  next(R) with prob(0.98)
+}
+
+state INF.H {
+  set_trans(INF,0)
+  set_state(Hospitalization,Yes)
+  wait(24 * lognormal(16.367132, 0.45))
+  next(R)
+}
+  
+state INF.R {
+  set_trans(INF,0) 
+  set_state(StayHome,Yes,No)
+  set_state(Hospitalization,No)
+  wait()
+  next()
+}
+  
+state INF.E.Import {
+  import_count(400)
+  wait()
+  next(INF.E)
+}
+  
+state INF.Import {
+  import_count(800)
+  wait()
+  next()
+}
+
+state INF.H.Import {
+  import_count(22)
+  wait()
+  next(INF.H)
+}
+  
+condition StayHome {
+  states = No Symptoms Yes
+}
+
+state StayHome.No {}
+
+state StayHome.Symptoms {
+  wait(0)
+  next(Yes) with prob(0.5)
+  default(No)
+} 
+
+state StayHome.Yes {
+  absent()
+  present(Household)
+  wait()
+  next()
+} 
+
+# Hospitalization condition
+condition Hospitalization {
+  states = No Yes
+}
+
+state Hospitalization.No {}
+
+state Hospitalization.Yes {
+  absent()
+  present(Hospital)
+  wait()
+  next()
+}

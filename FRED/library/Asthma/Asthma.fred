@@ -1,0 +1,81 @@
+
+# MODULE FRED::ASTHMA
+# Author: John Grefenstette and Mary Krauland
+# Date: 28 Oct 2019
+
+start_date = 2020-Jan-01
+end_date = 2021-Jan-01
+locations = Jefferson_County_PA
+
+Condition ASTHMA {
+  states = AtRisk Acute Recovered Negative Import
+  enable_health_records = 1
+  AtRisk.visualize = 1
+  Acute.visualize = 1
+  Recovered.visualize = 1
+  transmission_mode = environmental
+  exposed_state = Acute
+  import_start_state = Import
+}
+
+state ASTHMA.Start {
+  if (sex==male, race==white, range(age, 0, 4)) then next(AtRisk) with prob(0.037)
+  if (sex==male, race==white, range(age, 5, 14)) then next(AtRisk) with prob(0.095)
+  if (sex==male, race==white, range(age, 15, 19)) then next(AtRisk) with prob(0.094)
+  if (sex==male, race==white, range(age, 20, 24)) then next(AtRisk) with prob(0.065)
+  if (sex==male, race==white, range(age, 25, 34)) then next(AtRisk) with prob(0.065)
+  if (sex==male, race==white, range(age, 35, 64)) then next(AtRisk) with prob(0.059)
+  if (sex==male, race==white, 65<=age) then next(AtRisk) with prob(0.055)
+  if (sex==female, race==white, range(age, 0, 4)) then next(AtRisk) with prob(0.037)
+  if (sex==female, race==white, range(age, 5, 14)) then next(AtRisk) with prob(0.084)
+  if (sex==female, race==white, range(age, 15, 19)) then next(AtRisk) with prob(0.112)
+  if (sex==female, race==white, range(age, 20, 24)) then next(AtRisk) with prob(0.115)
+  if (sex==female, race==white, range(age, 25, 34)) then next(AtRisk) with prob(0.105)
+  if (sex==female, race==white, range(age, 35, 64)) then next(AtRisk) with prob(0.107)
+  if (sex==female, race==white, 65<=age) then next(AtRisk) with prob(0.075)
+  if (sex==male, race!=white, range(age, 0, 4)) then next(AtRisk) with prob(0.115)
+  if (sex==male, race!=white, range(age, 5, 14)) then next(AtRisk) with prob(0.201)
+  if (sex==male, race!=white, range(age, 15, 19)) then next(AtRisk) with prob(0.128)
+  if (sex==male, race!=white, range(age, 20, 24)) then next(AtRisk) with prob(0.143)
+  if (sex==male, race!=white, range(age, 25, 34)) then next(AtRisk) with prob(0.088)
+  if (sex==male, race!=white, range(age, 35, 64)) then next(AtRisk) with prob(0.063)
+  if (sex==male, race!=white, 65<=age) then next(AtRisk) with prob(0.078)
+  if (sex==female, race!=white, range(age, 0, 4)) then next(AtRisk) with prob(0.09)
+  if (sex==female, race!=white, range(age, 5, 14)) then next(AtRisk) with prob(0.177)
+  if (sex==female, race!=white, range(age, 15, 19)) then next(AtRisk) with prob(0.179)
+  if (sex==female, race!=white, range(age, 20, 24)) then next(AtRisk) with prob(0.132)
+  if (sex==female, race!=white, range(age, 25, 34)) then next(AtRisk) with prob(0.125)
+  if (sex==female, race!=white, range(age, 35, 64)) then next(AtRisk) with prob(0.127)
+  if (sex==female, race!=white, 65<=age) then next(AtRisk) with prob(0.079)
+  default(Negative)
+}
+
+state ASTHMA.AtRisk {
+  set_sus(ASTHMA, 1.0)
+  wait()
+  next()
+}
+
+state ASTHMA.Acute {
+  set_sus(ASTHMA, 0.0)
+  wait(24)
+  next(Recovered)
+}
+
+state ASTHMA.Recovered {
+  wait(24*10)
+  next(AtRisk)
+}
+
+state ASTHMA.Negative {
+  set_sus(ASTHMA, 0.0)
+  wait()
+  next()
+}
+
+state ASTHMA.Import {
+  import_per_capita(0.01)
+  wait()
+  next()
+}
+

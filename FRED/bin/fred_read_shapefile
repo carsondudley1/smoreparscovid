@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+
+##########################################################################################
+## 
+##  This file is part of the FRED system.
+##
+## Copyright (c) 2010-2012, University of Pittsburgh, John Grefenstette, Shawn Brown, 
+## Roni Rosenfield, Alona Fyshe, David Galloway, Nathan Stone, Jay DePasse, 
+## Anuroop Sriram, and Donald Burke
+## All rights reserved.
+##
+## Copyright (c) 2013-2021, University of Pittsburgh, John Grefenstette, Robert Frankeny,
+## David Galloway, Mary Krauland, Michael Lann, David Sinclair, and Donald Burke
+## All rights reserved.
+##
+## FRED is distributed on the condition that users fully understand and agree to all terms of the 
+## End User License Agreement.
+##
+## FRED is intended FOR NON-COMMERCIAL, EDUCATIONAL OR RESEARCH PURPOSES ONLY.
+##
+## See the file "LICENSE" for more information.
+##
+##########################################################################################
+
+use strict;
+use warnings;
+use Geo::ShapeFile;
+use Getopt::Long;
+
+my $usage = "usage: $0 shapefile outdir\n"; 
+my ($file, $outdir) = @ARGV;
+die $usage if not $file;
+die $usage if not $outdir;
+my $shapefile = new Geo::ShapeFile($file) or die "ERROR reading file $file\n";
+system "mkdir -p $outdir";
+(-d $outdir) or die "ERROR no directory $outdir\n";
+
+for(1 .. $shapefile->shapes()) {
+  my $shape = $shapefile->get_shp_record($_);
+  # see Geo::ShapeFile::Shape docs for what to do with $shape
+  my %dbf = $shapefile->get_dbf_record($_);
+  # print_fields(%dbf);
+  my $fips = $dbf{'GEOID10'};
+  open SHAPE_OUTPUT,">$outdir/$fips.txt";
+  print_shape($shape);
+  close SHAPE_OUTPUT;
+}
+exit;
+
+sub print_fields{
+  my %dbf = @_;
+  for my $key (sort keys %dbf) {
+    print "KEY=|$key| VAL=|$dbf{$key}|\n";
+  }
+  print "\n";
+}
+
+sub print_shape {
+  my $shape = shift;
+  for my $n_part (1..$shape->num_parts){
+    my @part = $shape->get_part($n_part);
+    foreach my $this_part (@part){
+      my $x = $this_part->X;
+      my $y = $this_part->Y;
+      printf SHAPE_OUTPUT "$y $x\n";
+    }
+    print SHAPE_OUTPUT "\n";
+  }
+}
