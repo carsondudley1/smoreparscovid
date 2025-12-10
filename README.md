@@ -67,13 +67,14 @@ python parameter_surface_reconstruction_example.py
 
 **Note:** The example script requires:
 - ABM sweep output data (generated in step 1)
-- Your own surveillance data (case counts and hospitalizations)
+- Surveillance data (case counts and hospitalizations)
 
 You will likely need to modify the script based on:
 - The structure and column names of your surveillance data
 - File paths to your ABM output and data files
 - Population size for your region of interest
 - Time period alignment between ABM simulations and observed data
+- Whatever surrogate model you choose to use (the script shows the simple SIRH model)
 
 ### Example Usage
 ```python
